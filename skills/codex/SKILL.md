@@ -5,20 +5,97 @@ description: Use when the user asks to run Codex CLI (codex exec, codex resume) 
 
 # Codex Skill Guide
 
+## Configuration Management
+
+### Config File
+User preferences are stored in `.codex-config.json` in the project root directory:
+
+```json
+{
+  "model": "gpt-5.1-codex-max",
+  "reasoning_effort": "medium",
+  "collaboration_mode": 1
+}
+```
+
+### Available Options
+
+| Option | Values | Default |
+|--------|--------|---------|
+| **model** | See model list below | `gpt-5.1-codex-max` |
+| **reasoning_effort** | `high`, `medium`, `low` | `medium` |
+| **collaboration_mode** | `1`, `2`, `3` | `1` |
+
+### Supported Models
+
+> **Maintenance Note**: Update this list periodically from [Codex Models Documentation](https://developers.openai.com/codex/models/)
+
+| Model | Description |
+|-------|-------------|
+| `gpt-5.2` | Latest general agentic model |
+| `gpt-5.1-codex-max` | Optimized for long-horizon agentic coding tasks (Recommended) |
+| `gpt-5.1-codex-mini` | Smaller, more cost-effective version |
+| `gpt-5.1-codex` | Predecessor to Max version |
+| `gpt-5-codex` | Older tuned version for coding |
+| `gpt-5-codex-mini` | Older budget option |
+| `gpt-5` | Base reasoning model |
+
+Last updated: 2025-12-12
+
+### First Run
+If `.codex-config.json` does not exist, use `AskUserQuestion` to ask all three options in a single question panel:
+1. Model selection
+2. Reasoning effort level
+3. Collaboration mode
+
+Then save the choices to `.codex-config.json`.
+
+### Subsequent Runs
+1. Read `.codex-config.json`
+2. Display current configuration to user briefly: "Using: [model], reasoning=[level], mode=[N]"
+3. Proceed with the task directly (no need to ask again)
+
+### User-Initiated Switching
+Users can change settings at any time by saying:
+- "Switch model to o3" / "Use o4-mini"
+- "Set reasoning effort to high" / "Use low reasoning"
+- "Switch to Mode 2" / "Use deep collaboration mode"
+- "Reset Codex config" (delete config and re-ask all options)
+
+When a switch command is detected:
+1. Update `.codex-config.json` with the new value
+2. Confirm the change to the user
+3. Continue with the current or next task
+
 ## Running a Task
-1. Ask the user (via `AskUserQuestion`) which reasoning effort to use (`high`, `medium`, or `low`). The model is fixed to `gpt-5.1-codex-max`.
-2. Select the sandbox mode required for the task; default to `--sandbox read-only` unless edits or network access are necessary.
-3. Assemble the command with the appropriate options:
-   - `-m gpt-5.1-codex-max`
+
+1. **Load or Initialize Configuration**
+   - If `.codex-config.json` exists, read it and display current settings
+   - If not, use `AskUserQuestion` to ask model, reasoning effort, and collaboration mode, then save to `.codex-config.json`
+
+2. **Determine Sandbox Mode** based on collaboration mode:
+   - Mode 1 & 3: `--sandbox read-only`
+   - Mode 2: `--sandbox workspace-write`
+
+3. **Assemble the Command** with configured options:
+   - `-m <model>`
    - `--config model_reasoning_effort="<high|medium|low>"`
    - `--sandbox <read-only|workspace-write|danger-full-access>`
    - `--full-auto`
    - `-C, --cd <DIR>`
    - `--skip-git-repo-check`
-4. Always use --skip-git-repo-check.
-5. When continuing a previous session, use `codex exec --skip-git-repo-check resume --last` via stdin. When resuming don't use any configuration flags unless explicitly requested by the user e.g. if he specifies the model or the reasoning effort when requesting to resume a session. Resume syntax: `echo "your prompt here" | codex exec --skip-git-repo-check resume --last 2>/dev/null`. All flags have to be inserted between exec and resume.
+
+4. Always use `--skip-git-repo-check`.
+
+5. **Resuming a Session**: Use `codex exec --skip-git-repo-check resume --last` via stdin. When resuming, don't use configuration flags unless explicitly requested by the user. Resume syntax:
+   ```bash
+   echo "your prompt here" | codex exec --skip-git-repo-check resume --last 2>/dev/null
+   ```
+   All flags must be inserted between `exec` and `resume`.
+
 6. **IMPORTANT**: By default, append `2>/dev/null` to all `codex exec` commands to suppress thinking tokens (stderr). Only show stderr if the user explicitly requests to see thinking tokens or if debugging is needed.
-7. Run the command, capture stdout/stderr (filtered as appropriate), and summarize the outcome for the user.
+
+7. **Execute and Follow Collaboration Mode Workflow** (see below).
 
 ## Collaboration Modes
 
@@ -89,5 +166,5 @@ Use `--sandbox read-only` with multiple rounds. Claude Code and Codex engage in 
 
 ## Error Handling
 - Stop and report failures whenever `codex --version` or a `codex exec` command exits non-zero; request direction before retrying.
-- Before you use high-impact flags (`--full-auto`, `--sandbox danger-full-access`, `--skip-git-repo-check`) ask the user for permission using AskUserQuestion unless it was already given.
+- Before you use high-impact flags (`--full-auto`, `--sandbox danger-full-access`) ask the user for permission using `AskUserQuestion` unless it was already given.
 - When output includes warnings or partial results, summarize them and ask how to adjust using `AskUserQuestion`.
