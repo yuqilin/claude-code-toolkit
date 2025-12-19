@@ -209,6 +209,7 @@ Use `--sandbox read-only` with multiple rounds. Claude Code designs the solution
 - Do not agree just to be agreeable - genuine disagreement is valuable
 - Seek truth and best solution, not consensus for its own sake
 - Clearly distinguish facts from opinions/preferences
+- Favor simplicity - complete functionality and correct logic suffice, avoid over-engineering
 
 **Token Usage Note:** Each resume round accumulates context. Limit to 2-3 rounds for cost efficiency.
 
